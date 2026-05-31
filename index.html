@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Island Health · Withdrawal Management Triage Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ===================== DESIGN TOKENS ===================== */
+  :root{
+    --ink:#0c2a31;
+    --ink-soft:#33545c;
+    --muted:#6b8389;
+    --bg:#eef3f4;
+    --surface:#ffffff;
+    --surface-2:#f6f9f9;
+    --line:#d9e3e5;
+    --line-strong:#c2d2d5;
+    --primary:#0f7a86;
+    --primary-deep:#0a525b;
+    --primary-tint:#e4f1f2;
+    --high:#b3261e;
+    --high-tint:#fbeae9;
+    --mod:#b06a00;
+    --mod-tint:#fbf0dd;
+    --low:#2e7d52;
+    --low-tint:#e6f3ec;
+    --gold:#caa45a;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(12,42,49,.06), 0 12px 30px -18px rgba(12,42,49,.35);
+    --shadow-sm:0 1px 2px rgba(12,42,49,.08);
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    font-family:"Public Sans",-apple-system,system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(15,122,134,.10), transparent 60%),
+      radial-gradient(700px 460px at -5% 0%, rgba(202,164,90,.10), transparent 55%),
+      var(--bg);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ===================== MASTHEAD ===================== */
+  .masthead{
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#ffffff, #fbfdfd);
+  }
+  .masthead-inner{
+    max-width:1180px;margin:0 auto;padding:18px 24px;
+    display:flex;align-items:center;gap:16px;
+  }
+  .ih-badge{
+    width:46px;height:46px;border-radius:11px;flex:none;
+    display:grid;place-items:center;
+    background:linear-gradient(145deg,var(--primary),var(--primary-deep));
+    color:#fff;font-family:"Fraunces",serif;font-weight:600;font-size:18px;letter-spacing:.5px;
+    box-shadow:0 6px 16px -8px rgba(10,82,91,.7);
+  }
+  .masthead h1{
+    margin:0;font-family:"Fraunces",serif;font-weight:500;
+    font-size:1.28rem;letter-spacing:.1px;line-height:1.1;
+  }
+  .masthead p{margin:2px 0 0;font-size:.82rem;color:var(--muted);letter-spacing:.02em;}
+  .masthead .tag{
+    margin-left:auto;font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;
+    color:var(--primary-deep);background:var(--primary-tint);
+    padding:6px 12px;border-radius:999px;font-weight:600;white-space:nowrap;
+  }
+
+  /* ===================== LAYOUT ===================== */
+  .layout{
+    max-width:1180px;margin:0 auto;padding:30px 24px 70px;
+    display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start;
+  }
+  .intro{margin:0 0 22px;}
+  .intro h2{
+    font-family:"Fraunces",serif;font-weight:500;font-size:1.55rem;margin:0 0 6px;
+    line-height:1.15;
+  }
+  .intro .sub{color:var(--ink-soft);font-size:.95rem;max-width:60ch;}
+
+  /* ===================== CARDS ===================== */
+  .card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow-sm);
+    padding:22px 22px 20px;margin-bottom:18px;
+  }
+  .card.gate{
+    border-color:var(--line-strong);
+    box-shadow:var(--shadow);
+    position:relative;overflow:hidden;
+  }
+  .card.gate::before{
+    content:"";position:absolute;inset:0 auto 0 0;width:4px;
+    background:linear-gradient(180deg,var(--primary),var(--gold));
+  }
+  .card-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .sec-num{
+    font-family:"Fraunces",serif;font-size:.95rem;color:var(--primary);
+    font-weight:600;background:var(--primary-tint);
+    width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none;
+    align-self:flex-start;margin-top:1px;
+  }
+  .card h3{margin:0;font-size:1.06rem;font-weight:700;letter-spacing:-.01em;}
+  .card .desc{font-size:.85rem;color:var(--muted);margin:2px 0 14px;}
+  .gate h3{font-size:1.18rem;font-family:"Fraunces",serif;font-weight:500;}
+
+  /* ===================== SEGMENTED SLIDER ===================== */
+  .segmented{
+    position:relative;display:grid;grid-template-columns:repeat(3,1fr);
+    background:var(--surface-2);border:1px solid var(--line);
+    border-radius:999px;padding:5px;margin:16px 0 4px;user-select:none;
+  }
+  .segmented .pill{
+    position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px)/3);
+    border-radius:999px;background:#fff;box-shadow:var(--shadow-sm);
+    transition:transform .28s cubic-bezier(.4,1.2,.4,1), background .25s;
+    border:1px solid var(--line);z-index:0;
+  }
+  .segmented[data-val="maybe"] .pill{transform:translateX(100%);}
+  .segmented[data-val="yes"]   .pill{transform:translateX(200%);
+    background:var(--low-tint);border-color:#bfe0cc;}
+  .segmented[data-val="no"]    .pill{transform:translateX(0);
+    background:var(--high-tint);border-color:#eccac7;}
+  .segmented button{
+    position:relative;z-index:1;border:0;background:transparent;cursor:pointer;
+    font-family:inherit;font-size:.92rem;font-weight:600;color:var(--muted);
+    padding:11px 8px;border-radius:999px;transition:color .2s;
+  }
+  .segmented button[aria-checked="true"]{color:var(--ink);}
+  .segmented[data-val="yes"] button.opt-yes[aria-checked="true"]{color:var(--low);}
+  .segmented[data-val="no"]  button.opt-no[aria-checked="true"]{color:var(--high);}
+  .gate-hint{font-size:.82rem;color:var(--muted);margin-top:6px;min-height:1.1em;transition:.2s;}
+
+  /* ===================== MAYBE CRITERIA ===================== */
+  .reveal{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease;}
+  .reveal.open{grid-template-rows:1fr;}
+  .reveal > div{overflow:hidden;}
+  .maybe-wrap{margin-top:14px;padding-top:16px;border-top:1px dashed var(--line-strong);}
+  .maybe-wrap .lead{font-size:.85rem;color:var(--ink-soft);margin:0 0 10px;font-weight:600;}
+
+  /* ===================== CHECK ITEMS ===================== */
+  .check{
+    display:flex;gap:12px;align-items:flex-start;padding:11px 12px;
+    border:1px solid var(--line);border-radius:11px;background:var(--surface);
+    cursor:pointer;transition:border-color .15s, background .15s, box-shadow .15s;
+    margin-bottom:9px;
+  }
+  .check:last-child{margin-bottom:0;}
+  .check:hover{border-color:var(--line-strong);background:var(--surface-2);}
+  .check:has(input:checked){
+    border-color:var(--primary);background:var(--primary-tint);
+    box-shadow:inset 0 0 0 1px var(--primary);
+  }
+  .check input{
+    appearance:none;-webkit-appearance:none;flex:none;
+    width:20px;height:20px;border:2px solid var(--line-strong);border-radius:6px;
+    margin:1px 0 0;cursor:pointer;display:grid;place-items:center;transition:.15s;background:#fff;
+  }
+  .check input:checked{background:var(--primary);border-color:var(--primary);}
+  .check input:checked::after{
+    content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;
+    transform:rotate(45deg);margin-top:-2px;
+  }
+  .check input:focus-visible{outline:3px solid rgba(15,122,134,.35);outline-offset:2px;}
+  .check .txt{font-size:.92rem;}
+  .check .txt b{font-weight:600;}
+  .check .note{display:block;font-size:.78rem;color:var(--muted);margin-top:3px;line-height:1.4;}
+
+  .disclaimer{
+    font-size:.76rem;color:var(--ink-soft);background:var(--surface-2);
+    border-left:3px solid var(--gold);border-radius:0 8px 8px 0;
+    padding:8px 11px;margin:-3px 0 9px 32px;line-height:1.45;
+  }
+
+  /* section1 emphasis */
+  .card[data-section="1"]{border-color:#eccac7;background:linear-gradient(180deg,#fffafa,#fff);}
+  .card[data-section="1"] .sec-num{color:var(--high);background:var(--high-tint);}
+  .card[data-section="1"] .check:has(input:checked){
+    border-color:var(--high);background:var(--high-tint);box-shadow:inset 0 0 0 1px var(--high);
+  }
+  .card[data-section="1"] .check input:checked{background:var(--high);border-color:var(--high);}
+
+  /* care-plan groups */
+  .cp-group{border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:10px;background:var(--surface-2);}
+  .cp-group:last-child{margin-bottom:0;}
+  .cp-title{font-weight:600;font-size:.9rem;margin:0 0 9px;}
+  .cp-opts{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;font-size:.84rem;cursor:pointer;
+    border:1px solid var(--line-strong);border-radius:999px;padding:6px 12px 6px 9px;background:#fff;
+    transition:.15s;
+  }
+  .chip:hover{border-color:var(--primary);}
+  .chip:has(input:checked){background:var(--primary-tint);border-color:var(--primary);color:var(--primary-deep);font-weight:600;}
+  .chip input{appearance:none;-webkit-appearance:none;width:15px;height:15px;border:2px solid var(--line-strong);border-radius:5px;display:grid;place-items:center;}
+  .chip input:checked{background:var(--primary);border-color:var(--primary);}
+  .chip input:checked::after{content:"";width:3.5px;height:7px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1.5px;}
+
+  /* ===================== INFO TOOLTIP ===================== */
+  .info{
+    display:inline-flex;align-items:center;justify-content:center;flex:none;
+    width:16px;height:16px;border-radius:50%;border:1.5px solid var(--muted);
+    color:var(--muted);font-size:10px;font-weight:700;font-style:normal;line-height:1;
+    font-family:"Public Sans",sans-serif;cursor:help;margin-left:6px;
+    position:relative;vertical-align:middle;transition:.15s;
+  }
+  .info:hover,.info:focus-visible{border-color:var(--primary);color:var(--primary);outline:none;}
+  .info .tip{
+    position:absolute;bottom:calc(100% + 9px);left:50%;
+    transform:translateX(-50%) translateY(4px);
+    background:var(--ink);color:#fff;font-size:.76rem;font-weight:500;line-height:1.45;
+    letter-spacing:.005em;text-align:left;padding:8px 11px;border-radius:9px;
+    width:max-content;max-width:230px;opacity:0;visibility:hidden;transition:.18s;
+    z-index:60;pointer-events:none;box-shadow:0 10px 26px -10px rgba(12,42,49,.55);
+  }
+  .info .tip::after{
+    content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+    border:6px solid transparent;border-top-color:var(--ink);
+  }
+  .info:hover .tip,.info:focus .tip,.info:focus-within .tip{
+    opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);
+  }
+  .chip .info{margin-left:0;}
+
+  .toolbar{display:flex;justify-content:flex-end;margin-top:6px;}
+  .btn-reset{
+    font-family:inherit;font-size:.85rem;font-weight:600;color:var(--ink-soft);
+    background:#fff;border:1px solid var(--line-strong);border-radius:9px;
+    padding:9px 16px;cursor:pointer;transition:.15s;
+  }
+  .btn-reset:hover{border-color:var(--high);color:var(--high);background:var(--high-tint);}
+
+  /* ===================== RESULT PANEL ===================== */
+  .result-col{position:sticky;top:22px;}
+  .result{
+    background:linear-gradient(180deg,#ffffff,#fbfdfd);
+    border:1px solid var(--line-strong);border-radius:18px;box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .result-top{padding:22px 22px 18px;text-align:center;position:relative;transition:background .3s;}
+  .result-eyebrow{font-size:.68rem;text-transform:uppercase;letter-spacing:.16em;color:var(--muted);font-weight:600;}
+  .badge{
+    font-family:"Fraunces",serif;font-size:1.7rem;font-weight:600;margin:8px 0 2px;line-height:1;
+    transition:color .3s;
+  }
+  .result-msg{font-size:.86rem;color:var(--ink-soft);margin-top:6px;min-height:1.2em;}
+  .level-low .badge{color:var(--low);}      .level-low .result-top{background:var(--low-tint);}
+  .level-moderate .badge{color:var(--mod);} .level-moderate .result-top{background:var(--mod-tint);}
+  .level-high .badge{color:var(--high);}     .level-high .result-top{background:var(--high-tint);}
+  .level-redirect .badge{color:var(--high);font-size:1.25rem;}
+  .level-redirect .result-top{background:var(--high-tint);}
+  .level-pending .badge{color:var(--muted);font-size:1.25rem;}
+
+  .result-body{padding:6px 20px 20px;}
+  .score-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 4px;border-bottom:1px solid var(--line);
+  }
+  .score-row .k{font-size:.82rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;}
+  .score-row .v{font-family:"Fraunces",serif;font-size:1.5rem;font-weight:600;}
+  .score-row .v small{font-size:.8rem;color:var(--muted);font-family:"Public Sans";font-weight:600;}
+
+  .summary-block{padding:13px 2px;border-bottom:1px solid var(--line);}
+  .summary-block:last-child{border-bottom:0;}
+  .summary-block h4{margin:0 0 8px;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;}
+  .flag{display:flex;gap:8px;align-items:flex-start;font-size:.83rem;color:var(--ink-soft);margin-bottom:5px;}
+  .flag:last-child{margin-bottom:0;}
+  .flag .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);margin-top:6px;flex:none;}
+  .flag.warn .dot{background:var(--high);}
+  .flag.good .dot{background:var(--low);}
+  .empty{font-size:.82rem;color:var(--muted);font-style:italic;}
+  .sn-chip{display:inline-block;font-size:.74rem;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:.04em;}
+  .sn-chip.yes{background:var(--low-tint);color:var(--low);}
+  .sn-chip.no{background:var(--surface-2);color:var(--muted);}
+
+  /* ===================== SCORING REFERENCE ===================== */
+  .ref{margin-top:18px;}
+  .ref summary{cursor:pointer;font-size:.82rem;font-weight:600;color:var(--primary-deep);list-style:none;display:flex;align-items:center;gap:7px;}
+  .ref summary::-webkit-details-marker{display:none;}
+  .ref summary::before{content:"›";font-size:1.1rem;transition:transform .2s;display:inline-block;}
+  .ref[open] summary::before{transform:rotate(90deg);}
+  .ref table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.82rem;}
+  .ref th,.ref td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);}
+  .ref th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.68rem;letter-spacing:.08em;}
+
+  /* ===================== FOOTER ===================== */
+  footer{
+    max-width:1180px;margin:0 auto;padding:0 24px 40px;
+    font-size:.78rem;color:var(--muted);line-height:1.6;
+  }
+  footer .rule{height:1px;background:var(--line);margin-bottom:16px;}
+
+  .fade-section{animation:fade .35s ease both;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+  @media (max-width:880px){
+    .layout{grid-template-columns:1fr;}
+    .result-col{position:static;order:-1;}
+    .masthead .tag{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="ih-badge">IH</div>
+    <div>
+      <h1>Island Health · Withdrawal Management</h1>
+      <p>Clinical Triage Calculator</p>
+    </div>
+    <span class="tag">Clinical staff use only</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- ============ FORM COLUMN ============ -->
+  <div class="form-col">
+    <div class="intro">
+      <h2>Withdrawal Management Triage</h2>
+      <p class="sub">Substance withdrawal triage priority. Begin with the eligibility question — the triage criteria unlock once eligibility is confirmed.</p>
+    </div>
+
+    <!-- ===== GATE ===== -->
+    <div class="card gate">
+      <div class="card-head"><h3>Does patient meet criteria for community detox?</h3></div>
+      <div class="segmented" id="gate" data-val="" role="radiogroup" aria-label="Does patient meet criteria for community detox?">
+        <span class="pill" aria-hidden="true"></span>
+        <button class="opt-no"    role="radio" aria-checked="false" data-val="no">No</button>
+        <button class="opt-maybe" role="radio" aria-checked="false" data-val="maybe">Maybe</button>
+        <button class="opt-yes"   role="radio" aria-checked="false" data-val="yes">Yes</button>
+      </div>
+      <p class="gate-hint" id="gateHint">Select an option to begin.</p>
+
+      <div class="reveal" id="maybeReveal">
+        <div>
+          <div class="maybe-wrap">
+            <p class="lead">Confirm the following — if all are met, eligibility is set to <b>Yes</b>:</p>
+            <label class="check">
+              <input type="checkbox" class="maybe" />
+              <span class="txt"><b>Requires inpatient withdrawal management</b></span>
+            </label>
+            <label class="check"><input type="checkbox" class="maybe" /><span class="txt">Independent with ADLs</span></label>
+            <label class="check"><input type="checkbox" class="maybe" /><span class="txt">Does not require IV fluids or medications</span></label>
+            <label class="check"><input type="checkbox" class="maybe" /><span class="txt">Age 18+</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TRIAGE CRITERIA (locked until eligible) ===== -->
+    <div class="reveal" id="triageReveal">
+      <div>
+      <div id="triage">
+
+        <!-- Section 1 -->
+        <div class="card" data-section="1">
+          <div class="card-head"><span class="sec-num">1</span><h3>High priority criteria</h3></div>
+          <p class="desc">Any item below flags the patient as <b>High priority</b> automatically.</p>
+          <label class="check"><input type="checkbox" class="crit s1" />
+            <span class="txt">Upcoming medical intervention<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">Surgical, oncologic, or treatment centre bed date.</span></span></span></label>
+          <label class="check"><input type="checkbox" class="crit s1" /><span class="txt">Pregnancy<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">Over 20 weeks requires Perinatal Addictions Review.</span></span></span></label>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="card" data-section="2" data-scored="1">
+          <div class="card-head"><span class="sec-num">2</span><h3>Medical risk</h3></div>
+          <p class="desc">1 point if any item is selected.</p>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">History of complex withdrawal<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">Seizure, alcoholic hallucinosis, delirium tremens.</span></span></span></label>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Recent overdose (past ~3 months)</span></label>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="card" data-section="3" data-scored="1">
+          <div class="card-head"><span class="sec-num">3</span><h3>Medical frailty</h3></div>
+          <p class="desc">1 point if any item is selected.</p>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Moderate–severe hepatic impairment<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">Child-Pugh Score B or C.</span></span></span></label>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Complex health management<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">Self-neglect, falls, etc.</span></span></span></label>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="card" data-section="4" data-scored="1">
+          <div class="card-head"><span class="sec-num">4</span><h3>Vulnerable populations</h3></div>
+          <p class="desc">1 point if any item is selected.</p>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Indigenous</span></label>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Age under 25 or over 65</span></label>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Potential or active MCFD involvement</span></label>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">IPV (intimate partner violence)</span></label>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="card" data-section="5" data-scored="1">
+          <div class="card-head"><span class="sec-num">5</span><h3>Equitable resource allocation</h3></div>
+          <p class="desc">1 point if any item is selected.</p>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Remote community</span></label>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Has not attended detox in the past year</span></label>
+        </div>
+
+        <!-- Section 6 -->
+        <div class="card" data-section="6" data-scored="1">
+          <div class="card-head"><span class="sec-num">6</span><h3>Hospitalization</h3></div>
+          <p class="desc">1 point if any item is selected.</p>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Recently (past week) presented to ED/RAAC in withdrawal with physician assessment</span></label>
+          <label class="check"><input type="checkbox" class="crit sc" /><span class="txt">Admitted to hospital &lt; 72h</span></label>
+        </div>
+
+        <!-- Short notice -->
+        <div class="card" data-section="sn">
+          <div class="card-head"><span class="sec-num" style="background:var(--low-tint);color:var(--low);">★</span><h3>Short notice list</h3></div>
+          <p class="desc">Patient is flagged as a short-notice candidate when all three are met.</p>
+          <label class="check"><input type="checkbox" class="sn" /><span class="txt">Highly motivated</span></label>
+          <label class="check"><input type="checkbox" class="sn" /><span class="txt">No admission in past 3 months</span></label>
+          <label class="check"><input type="checkbox" class="sn" /><span class="txt">Agreeable to short notice list</span></label>
+        </div>
+
+        <!-- Special care planning -->
+        <div class="card" data-section="cp">
+          <div class="card-head"><span class="sec-num" style="background:var(--primary-tint);color:var(--primary);">✦</span><h3>Special care planning considerations</h3></div>
+          <p class="desc">Flags for admission planning. These do not affect the triage score.</p>
+
+          <div class="cp-group" data-cp="Housing" data-exclusive="1">
+            <p class="cp-title">Housing</p>
+            <div class="cp-opts">
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Housed">Housed</label>
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Unstable">Unstable</label>
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Unhoused">Unhoused</label>
+            </div>
+          </div>
+
+          <div class="cp-group" data-cp="Single room">
+            <p class="cp-title">Single room</p>
+            <div class="cp-opts">
+              <label class="chip"><input type="checkbox" class="cp" data-ind="MRSA">MRSA<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">MRSA with wounds that cannot be easily covered.</span></span></label>
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Transgender">Transgender</label>
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Other indication">Other indication<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">Very young, CPAP, severe PTSD.</span></span></label>
+            </div>
+          </div>
+
+          <div class="cp-group" data-cp="Care plan">
+            <p class="cp-title">Care plan</p>
+            <div class="cp-opts">
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Community team">Community team</label>
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Behavioural concerns">Behavioural concerns<span class="info" tabindex="0" role="button" aria-label="More information">i<span class="tip">Previous admissions or charting.</span></span></label>
+            </div>
+          </div>
+
+          <div class="cp-group" data-cp="Weekday admission">
+            <p class="cp-title">Weekday admission</p>
+            <div class="cp-opts">
+              <label class="chip"><input type="checkbox" class="cp" data-ind="HOV concerns">HOV concerns</label>
+              <label class="chip"><input type="checkbox" class="cp" data-ind="Psychiatric concerns">Psychiatric concerns</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar"><button class="btn-reset" id="resetBtn">↺ Reset all</button></div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RESULT COLUMN ============ -->
+  <aside class="result-col">
+    <div class="result level-pending" id="result">
+      <div class="result-top">
+        <div class="result-eyebrow">Priority Level</div>
+        <div class="badge" id="badge">Pending</div>
+        <div class="result-msg" id="resultMsg">Answer the eligibility question to begin.</div>
+      </div>
+      <div class="result-body" id="resultBody" hidden>
+        <div class="score-row">
+          <span class="k">Total Score</span>
+          <span class="v"><span id="scoreVal">0</span><small> / 5</small></span>
+        </div>
+        <div class="summary-block" id="blkPriority" hidden>
+          <h4>Priority drivers</h4>
+          <div id="driverList"></div>
+        </div>
+        <div class="summary-block">
+          <h4>Short notice</h4>
+          <div id="snOut"><span class="sn-chip no">Not flagged</span></div>
+        </div>
+        <div class="summary-block">
+          <h4>Care planning</h4>
+          <div id="cpOut"><span class="empty">None flagged</span></div>
+        </div>
+      </div>
+
+      <div class="result-body">
+        <details class="ref">
+          <summary>Scoring reference</summary>
+          <table>
+            <thead><tr><th>Score</th><th>Priority</th></tr></thead>
+            <tbody>
+              <tr><td>Section 1 checked</td><td>High (automatic)</td></tr>
+              <tr><td>0 – 1</td><td>Routine priority</td></tr>
+              <tr><td>2 – 3</td><td>Moderate priority</td></tr>
+              <tr><td>4 – 5</td><td>High priority</td></tr>
+            </tbody>
+          </table>
+        </details>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  <div class="rule"></div>
+  Island Health Withdrawal Management · For clinical staff use only · Always apply clinical judgment alongside this tool.
+</footer>
+
+<script>
+/* ============================================================
+   EDITABLE CONFIG — adjust priority thresholds here.
+   Score = number of sections (2–6) with at least one item checked (0–5).
+   Section 1 always forces "High".
+============================================================ */
+const THRESHOLDS = { moderateMin: 2, highMin: 4 }; // <2 Routine, 2–3 Moderate, >=4 High
+
+const gate       = document.getElementById('gate');
+const gateBtns   = gate.querySelectorAll('button');
+const gateHint   = document.getElementById('gateHint');
+const maybeReveal= document.getElementById('maybeReveal');
+const triageReveal=document.getElementById('triageReveal');
+const result     = document.getElementById('result');
+const badge      = document.getElementById('badge');
+const resultMsg  = document.getElementById('resultMsg');
+const resultBody = document.getElementById('resultBody');
+
+let gateVal = ''; // '', 'no', 'maybe', 'yes'
+
+function setGate(val){
+  gateVal = val;
+  gate.dataset.val = val;
+  gateBtns.forEach(b => b.setAttribute('aria-checked', b.dataset.val === val));
+  maybeReveal.classList.toggle('open', val === 'maybe');
+  render();
+}
+
+gateBtns.forEach(b => b.addEventListener('click', () => setGate(b.dataset.val)));
+
+function maybeAllChecked(){
+  const boxes = [...document.querySelectorAll('.maybe')];
+  return boxes.length > 0 && boxes.every(b => b.checked);
+}
+
+function render(){
+  let eligible = (gateVal === 'yes');
+
+  // hints
+  if(gateVal === '') gateHint.textContent = 'Select an option to begin.';
+  else if(gateVal === 'no') gateHint.textContent = 'Patient does not meet criteria.';
+  else if(gateVal === 'maybe') gateHint.textContent = 'Confirm the criteria below to proceed.';
+  else if(gateVal === 'yes') gateHint.textContent = 'Eligibility confirmed — complete the triage criteria.';
+
+  triageReveal.classList.toggle('open', eligible);
+
+  /* ---- REDIRECT (No) ---- */
+  if(gateVal === 'no'){
+    setLevel('redirect', 'Redirect', 'Redirect to appropriate services.');
+    resultBody.hidden = true;
+    return;
+  }
+  /* ---- PENDING (none / maybe-incomplete) ---- */
+  if(!eligible){
+    setLevel('pending', 'Pending',
+      gateVal === 'maybe' ? 'Confirm all eligibility criteria to unlock triage.'
+                          : 'Answer the eligibility question to begin.');
+    resultBody.hidden = true;
+    return;
+  }
+
+  /* ---- ELIGIBLE: score sections 2–6 ---- */
+  resultBody.hidden = false;
+  let score = 0;
+  document.querySelectorAll('.card[data-scored="1"]').forEach(card => {
+    if(card.querySelector('.crit.sc:checked')) score++;
+  });
+  document.getElementById('scoreVal').textContent = score;
+
+  const s1 = [...document.querySelectorAll('.s1:checked')];
+  const drivers = [];
+  s1.forEach(cb => drivers.push(cb.closest('.check').querySelector('.txt').childNodes[0].textContent.trim()));
+
+  let level, label, msg;
+  if(s1.length){ level='high'; label='High'; msg='Section 1 criterion met — automatic high priority.'; }
+  else if(score >= THRESHOLDS.highMin){ level='high'; label='High'; msg='Multiple priority factors present.'; }
+  else if(score >= THRESHOLDS.moderateMin){ level='moderate'; label='Moderate'; msg='Some priority factors present.'; }
+  else { level='low'; label='Routine'; msg='Few or no priority factors.'; }
+  setLevel(level, label, msg);
+
+  // priority drivers block
+  const blk = document.getElementById('blkPriority');
+  const dl  = document.getElementById('driverList');
+  if(s1.length){
+    blk.hidden = false;
+    dl.innerHTML = drivers.map(d => `<div class="flag warn"><span class="dot"></span>${d}</div>`).join('');
+  } else { blk.hidden = true; dl.innerHTML=''; }
+
+  /* ---- short notice ---- */
+  const sn = [...document.querySelectorAll('.sn')];
+  const snChecked = sn.filter(b => b.checked).length;
+  const snOut = document.getElementById('snOut');
+  if(snChecked === sn.length && sn.length){
+    snOut.innerHTML = '<span class="sn-chip yes">✓ Short-notice candidate</span>';
+  } else if(snChecked > 0){
+    snOut.innerHTML = `<span class="sn-chip no">${snChecked}/${sn.length} criteria met</span>`;
+  } else {
+    snOut.innerHTML = '<span class="sn-chip no">Not flagged</span>';
+  }
+
+  /* ---- care planning ---- */
+  const cpOut = document.getElementById('cpOut');
+  const groups = {};
+  document.querySelectorAll('.cp:checked').forEach(cb => {
+    const g = cb.closest('.cp-group').dataset.cp;
+    (groups[g] = groups[g] || []).push(cb.dataset.ind);
+  });
+  const keys = Object.keys(groups);
+  cpOut.innerHTML = keys.length
+    ? keys.map(g => `<div class="flag"><span class="dot"></span><span><b>${g}:</b> ${groups[g].join(', ')}</span></div>`).join('')
+    : '<span class="empty">None flagged</span>';
+}
+
+function setLevel(level, label, msg){
+  result.className = 'result level-' + level;
+  badge.textContent = label;
+  resultMsg.textContent = msg;
+}
+
+/* listeners */
+document.querySelectorAll('.maybe,.crit,.sn,.cp').forEach(el => el.addEventListener('change', render));
+
+/* promote Maybe -> Yes only when the final eligibility box is checked.
+   (Switching the toggle to Maybe never auto-promotes, so checks stay reviewable.) */
+document.querySelectorAll('.maybe').forEach(cb => cb.addEventListener('change', () => {
+  if(gateVal === 'maybe' && maybeAllChecked()) setGate('yes');
+}));
+
+/* info icons: don't toggle the checkbox they sit inside; just show the tip */
+document.querySelectorAll('.info').forEach(i => {
+  i.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+  i.addEventListener('keydown', e => { if(e.key === ' ' || e.key === 'Enter') e.preventDefault(); });
+});
+
+/* single-select groups (e.g. Housing): checking one clears the others */
+document.querySelectorAll('.cp-group[data-exclusive] .cp').forEach(box => {
+  box.addEventListener('change', () => {
+    if(box.checked){
+      box.closest('.cp-group').querySelectorAll('.cp').forEach(o => { if(o !== box) o.checked = false; });
+    }
+    render();
+  });
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false);
+  setGate('');
+});
+
+render();
+</script>
+</body>
+</html>
